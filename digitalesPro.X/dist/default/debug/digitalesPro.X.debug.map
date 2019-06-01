@@ -1,0 +1,93 @@
+MPLINK 5.09, LINKER
+Linker Map File - Created Wed Mar 20 21:56:17 2019
+
+                                 Section Info
+                  Section       Type    Address   Location Size(Bytes)
+                ---------  ---------  ---------  ---------  ---------
+                 RES_VECT       code   0x000000    program   0x000002
+                   .cinit    romdata   0x000001    program   0x000004
+                      ISR       code   0x000004    program   0x000128
+                MAIN_PROG       code   0x000098    program   0x0000c0
+.config_2007_BUILD/DEFAULT/DEBUG/MAIN0.O       code   0x002007    program   0x000002
+
+
+
+                              Program Memory Usage 
+                               Start         End      
+                           ---------   ---------      
+                            0x000000    0x000002      
+                            0x000004    0x0000f7      
+                            0x002007    0x002007      
+            248 out of 1158 program addresses used, program memory utilization is 21%
+
+
+
+                              Symbols - Sorted by Name
+                     Name    Address   Location    Storage File                     
+                ---------  ---------  ---------  --------- ---------                
+                     BAUD   0x000005    program     static /home/killtutor/MPLABXProjects/digitalesPro.X/main0.asm
+               BIENVENIDA   0x0000e5    program     static /home/killtutor/MPLABXProjects/digitalesPro.X/main0.asm
+              BIENVENIDA2   0x0000f0    program     static /home/killtutor/MPLABXProjects/digitalesPro.X/main0.asm
+                  ESPERAD   0x0000b2    program     static /home/killtutor/MPLABXProjects/digitalesPro.X/main0.asm
+                  ESPERAI   0x0000a5    program     static /home/killtutor/MPLABXProjects/digitalesPro.X/main0.asm
+                    FOUR0   0x000081    program     static /home/killtutor/MPLABXProjects/digitalesPro.X/main0.asm
+                    FOUR1   0x000083    program     static /home/killtutor/MPLABXProjects/digitalesPro.X/main0.asm
+                 GUERCOME   0x000098    program     static /home/killtutor/MPLABXProjects/digitalesPro.X/main0.asm
+                 HALFBAUD   0x000009    program     static /home/killtutor/MPLABXProjects/digitalesPro.X/main0.asm
+                INTERRUPT   0x00005c    program     static /home/killtutor/MPLABXProjects/digitalesPro.X/main0.asm
+                  INTLIST   0x000088    program     static /home/killtutor/MPLABXProjects/digitalesPro.X/main0.asm
+                    LISTO   0x00006b    program     static /home/killtutor/MPLABXProjects/digitalesPro.X/main0.asm
+                      ONE   0x000073    program     static /home/killtutor/MPLABXProjects/digitalesPro.X/main0.asm
+                      RE0   0x000011    program     static /home/killtutor/MPLABXProjects/digitalesPro.X/main0.asm
+                     RE0D   0x000025    program     static /home/killtutor/MPLABXProjects/digitalesPro.X/main0.asm
+                      RE1   0x000019    program     static /home/killtutor/MPLABXProjects/digitalesPro.X/main0.asm
+                     RE1D   0x00002d    program     static /home/killtutor/MPLABXProjects/digitalesPro.X/main0.asm
+                  RECEIVE   0x00000e    program     static /home/killtutor/MPLABXProjects/digitalesPro.X/main0.asm
+                 RECEIVED   0x000025    program     static /home/killtutor/MPLABXProjects/digitalesPro.X/main0.asm
+                       S1   0x00003c    program     static /home/killtutor/MPLABXProjects/digitalesPro.X/main0.asm
+                     SEND   0x000037    program     static /home/killtutor/MPLABXProjects/digitalesPro.X/main0.asm
+                    START   0x0000bf    program     static /home/killtutor/MPLABXProjects/digitalesPro.X/main0.asm
+                    T0INT   0x000055    program     static /home/killtutor/MPLABXProjects/digitalesPro.X/main0.asm
+                    T1INT   0x000048    program     static /home/killtutor/MPLABXProjects/digitalesPro.X/main0.asm
+                     TREE   0x00007e    program     static /home/killtutor/MPLABXProjects/digitalesPro.X/main0.asm
+                      TWO   0x000078    program     static /home/killtutor/MPLABXProjects/digitalesPro.X/main0.asm
+          _MAIN_PROG_005F   0x0000f7    program     static /home/killtutor/MPLABXProjects/digitalesPro.X/main0.asm
+                    baud1   0x000007    program     static /home/killtutor/MPLABXProjects/digitalesPro.X/main0.asm
+                   hbaud1   0x00000b    program     static /home/killtutor/MPLABXProjects/digitalesPro.X/main0.asm
+
+
+
+                              Symbols - Sorted by Address
+                     Name    Address   Location    Storage File                     
+                ---------  ---------  ---------  --------- ---------                
+                     BAUD   0x000005    program     static /home/killtutor/MPLABXProjects/digitalesPro.X/main0.asm
+                    baud1   0x000007    program     static /home/killtutor/MPLABXProjects/digitalesPro.X/main0.asm
+                 HALFBAUD   0x000009    program     static /home/killtutor/MPLABXProjects/digitalesPro.X/main0.asm
+                   hbaud1   0x00000b    program     static /home/killtutor/MPLABXProjects/digitalesPro.X/main0.asm
+                  RECEIVE   0x00000e    program     static /home/killtutor/MPLABXProjects/digitalesPro.X/main0.asm
+                      RE0   0x000011    program     static /home/killtutor/MPLABXProjects/digitalesPro.X/main0.asm
+                      RE1   0x000019    program     static /home/killtutor/MPLABXProjects/digitalesPro.X/main0.asm
+                 RECEIVED   0x000025    program     static /home/killtutor/MPLABXProjects/digitalesPro.X/main0.asm
+                     RE0D   0x000025    program     static /home/killtutor/MPLABXProjects/digitalesPro.X/main0.asm
+                     RE1D   0x00002d    program     static /home/killtutor/MPLABXProjects/digitalesPro.X/main0.asm
+                     SEND   0x000037    program     static /home/killtutor/MPLABXProjects/digitalesPro.X/main0.asm
+                       S1   0x00003c    program     static /home/killtutor/MPLABXProjects/digitalesPro.X/main0.asm
+                    T1INT   0x000048    program     static /home/killtutor/MPLABXProjects/digitalesPro.X/main0.asm
+                    T0INT   0x000055    program     static /home/killtutor/MPLABXProjects/digitalesPro.X/main0.asm
+                INTERRUPT   0x00005c    program     static /home/killtutor/MPLABXProjects/digitalesPro.X/main0.asm
+                    LISTO   0x00006b    program     static /home/killtutor/MPLABXProjects/digitalesPro.X/main0.asm
+                      ONE   0x000073    program     static /home/killtutor/MPLABXProjects/digitalesPro.X/main0.asm
+                      TWO   0x000078    program     static /home/killtutor/MPLABXProjects/digitalesPro.X/main0.asm
+                     TREE   0x00007e    program     static /home/killtutor/MPLABXProjects/digitalesPro.X/main0.asm
+                    FOUR0   0x000081    program     static /home/killtutor/MPLABXProjects/digitalesPro.X/main0.asm
+                    FOUR1   0x000083    program     static /home/killtutor/MPLABXProjects/digitalesPro.X/main0.asm
+                  INTLIST   0x000088    program     static /home/killtutor/MPLABXProjects/digitalesPro.X/main0.asm
+                 GUERCOME   0x000098    program     static /home/killtutor/MPLABXProjects/digitalesPro.X/main0.asm
+                  ESPERAI   0x0000a5    program     static /home/killtutor/MPLABXProjects/digitalesPro.X/main0.asm
+                  ESPERAD   0x0000b2    program     static /home/killtutor/MPLABXProjects/digitalesPro.X/main0.asm
+                    START   0x0000bf    program     static /home/killtutor/MPLABXProjects/digitalesPro.X/main0.asm
+               BIENVENIDA   0x0000e5    program     static /home/killtutor/MPLABXProjects/digitalesPro.X/main0.asm
+              BIENVENIDA2   0x0000f0    program     static /home/killtutor/MPLABXProjects/digitalesPro.X/main0.asm
+          _MAIN_PROG_005F   0x0000f7    program     static /home/killtutor/MPLABXProjects/digitalesPro.X/main0.asm
+
+

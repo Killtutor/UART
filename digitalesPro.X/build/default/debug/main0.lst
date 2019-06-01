@@ -1,0 +1,726 @@
+MPASM 5.83  /HOME/KILLTUTOR/MPLABXPROJECTS/D   3-20-2019  17:56:17         PAGE  1
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+                      00001 ;*******************************************************************************
+                      00002 ;                                                                              *
+                      00003 ;    Filename: main0                                                           *
+                      00004 ;    Date: 06/03/19                                                            *
+                      00005 ;    File Version: 1.1.1                                                       *
+                      00006 ;    Author: Killtutor                                                         *
+                      00007 ;    Company: UCV                                                              *
+                      00008 ;    Description: Project for the digitales subject                            *
+                      00009 ;                                                                              *
+                      00010 ;*******************************************************************************
+                      00011 
+                      00012 #include "p16f676.inc"
+                      00001         LIST
+                      00002 
+                      00003 ;==========================================================================
+                      00004 ; Build date : Jan 21 2019
+                      00005 ;  MPASM PIC16F676 processor include
+                      00006 ; 
+                      00007 ;  (c) Copyright 1999-2019 Microchip Technology, All rights reserved
+                      00008 ;==========================================================================
+                      00009 
+                      00389         LIST
+                      00013     
+2007   3F94           00014  __CONFIG _FOSC_INTRCIO & _WDTE_OFF & _PWRTE_OFF & _MCLRE_OFF & _BOREN_OFF & _CP_OFF & _CPD_OFF  ;Solo u
+                            so el oscilador interno sin salida de reloj, las demas caracteristicas apagadas
+                      00015  
+                      00016 ;VARIABLE DEFINITION 
+                      00017 ;*******************************************************************************
+                      00018 
+  0000005F            00019 PWMDATA         EQU         5FH     ; DATA QUE MANDA EL USUARIO PWM
+  0000005E            00020 T0C             EQU         5EH     ; CONTADAOR PARA EL RELOJ 0
+  0000005D            00021 DATO            EQU         5DH     ; DATO MANDADO
+  0000005C            00022 BUFFER          EQU         5CH     ;BUFFER REC AND SEND
+  0000005B            00023 TEMP            EQU         5BH     ;VARIABLE TEMPORAL
+                      00024 ;STOPT0         EQU         5AH     ;VARIABLE PARA SABER SI RECIBIR EL DATO O NO
+  00000059            00025 COUNT           EQU         59H     ;CONTADOR
+  00000058            00026 W_TEMP          EQU         58H     ; w register for context saving (ACCESS)
+  00000057            00027 STATUS_TEMP     EQU         57H     ; status used for context saving
+  00000056            00028 BSR_TEMP        EQU         56H     ; bank select used for ISR context saving
+  00000055            00029 CUENTA          EQU         55H     ;CONTADOR PARA ENVIAR MENSAJE DE BIENVENIDA
+  00000054            00030 SIZE            EQU         54H     ;TAMAÑO DE LA CADENA A MANDAR
+                      00031 
+                      00032 ;*******************************************************************************
+                      00033 ; Reset Vector
+                      00034 ;*******************************************************************************
+                      00035 
+                      00036 RES_VECT  CODE    0x0000            ; processor reset vector
+0000   2???           00037     GOTO    START                   ; go to beginning of program
+                      00038 
+                      00039 ;*******************************************************************************
+                      00040 ; INTERRUPT VECTOR
+                      00041 ;*******************************************************************************
+                      00042 ISR       CODE    0x0004           ; interrupt vector location
+MPASM 5.83  /HOME/KILLTUTOR/MPLABXPROJECTS/D   3-20-2019  17:56:17         PAGE  2
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+0004   2???           00043     GOTO    INTERRUPT
+                      00044 
+                      00045 ;SUBRUTINA PARA ESPERAR 1 BAUD O 1/2 BAUD        
+0005                  00046 BAUD                           ; A 1200 BAUD EL PERIODO POR BIT ES 833.3 US         
+0005   3089           00047     movlw   89h                 ; 1 US   (BAUD RATE CONSTANT)  137'DECIMAL'     
+0006   00D9           00048     movwf   COUNT               ; 1 US  MUEVO W A COUNT
+0007                  00049 baud1        
+0007   0BD9           00050     decfsz  COUNT,1             ; 1 US (+ 1 US MORE IF SKIP)   CUENTO HASTA 137     
+0008   2???           00051     goto    baud1               ; 2 US REGRESO A BAUD1 (CICLO)                               
+                      00052                                 ; SE ACABA LUEGO DE 1+1+1+1+3x137+1 = 416 US 
+0009                  00053 HALFBAUD                        ;       AQUI REPITO TODO OTRA VEZ.. PARA EL MEDIO BAUD FALTANTE
+0009   3089           00054     movlw   89h                 ; 1 US        ASI LOS PUEDO DIVIDIR EN 1 BAUD Y 1/2 BAUD
+000A   00D9           00055     movwf   COUNT               ; 1 US
+000B                  00056 hbaud1        
+000B   0BD9           00057     decfsz  COUNT,F             ; 1 US (+ 1 US MORE IF SKIP)       
+000C   2???           00058     goto    hbaud1              ; 2 US        
+000D   0008           00059     RETURN                      ; SALGO LUEGO DE 1+1+1+1+3x137+1 = 416 US  (TOTAL=832 US O 416 US)
+                      00060     
+                      00061 ; SUBRUTINA QUE RECIBE SERIAL
+000E                  00062 RECEIVE
+000E   138B           00063     BCF         INTCON,7            ;DESHABILITO LAS INTERRUPCIONES GENERALES 
+000F   130B           00064     BCF         INTCON,6            ;DESHABILITO LAS INTERRUPCIONES PERIFERICAS
+Message[302]: Register in operand not in bank 0.  Ensure that bank bits are correct.
+0010   1116           00065     BCF         IOCA, 2             ;DESHABILITO INTERRUPCIONES PUERTO A
+0011                  00066 RE0
+0011   1905           00067     BTFSC       PORTA, 2            ;SALTO EL BIT DE START
+0012   2???           00068     GOTO        RE0                 ;SINO SIGO ESPERANDO EL BIT DE START
+0013   3008           00069     MOVLW       08H                 ; QUIERO RECIBIR 8 BITS
+0014   00DB           00070     MOVWF       TEMP                ;TEMP = 8 Ó 1000
+0015   01DC           00071     CLRF        BUFFER              ;LIMPIO EL REGISTRO BUFFER
+0016   2???           00072     CALL        HALFBAUD            ;ESPERO MEDIO CICLO
+0017   1905           00073     BTFSC       PORTA, 2            ;SALTO SI SIGO ESTANDO EN EL BIT DE START
+0018   2???           00074     GOTO        RE0                 ;FUE UN SPIKE ASI Q SIGO ESPERANDO EL BIT DE START
+0019                  00075 RE1
+0019   2???           00076     CALL        BAUD                ;SUPONIENDO  SIGO N EL BIT START ESPERO UN CICLO PARA LEER EL SIGUIN
+                            TE BIT
+001A   1003           00077     BCF         STATUS, 0           ; LIMPIO EL CARRY BIT
+001B   0CDC           00078     RRF         BUFFER, 1           ;ROTO MSB LE METO EL CARRY(0) EN EL LSB
+001C   1905           00079     BTFSC       PORTA,2             ;eL PUERTO ESTA EN 0?
+001D   17DC           00080     BSF         BUFFER,7            ;NO, METO EN EL ULTIMO BIT UN 1 
+001E   0BDB           00081     DECFSZ      TEMP, 1             ;YA TENGO LOS 8BITS?
+001F   2???           00082     GOTO        RE1                 ;NO, TODAVI NO LOS TIENES SIGUE RECIBIENDO
+0020   2???           00083     CALL        BAUD                ;ESPERO UN BAUD ESPERANDO EL BIT DE PARADA  
+0021   085C           00084     MOVF        BUFFER, 0           ;METO BUFFER EN W
+0022   2???           00085     CALL        SEND
+0023   085C           00086     MOVF        BUFFER,0
+0024   2???           00087     GOTO        INTLIST             ;LISTA LA INTERRUPCION YA RECIBÍ LA INSTRUCCION
+                      00088     
+0025                  00089 RECEIVED
+                      00090     
+0025                  00091 RE0D
+0025   1905           00092     BTFSC       PORTA, 2            ;SALTO EL BIT DE START
+0026   2???           00093     GOTO        RE0D                ;SINO SIGO ESPERANDO EL BIT DE START
+MPASM 5.83  /HOME/KILLTUTOR/MPLABXPROJECTS/D   3-20-2019  17:56:17         PAGE  3
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+0027   3008           00094     MOVLW       08H                 ; QUIERO RECIBIR 8 BITS
+0028   00DB           00095     MOVWF       TEMP                ;TEMP = 8 Ó 1000
+0029   01DC           00096     CLRF        BUFFER              ;LIMPIO EL REGISTRO BUFFER
+002A   2???           00097     CALL        HALFBAUD            ;ESPERO MEDIO CICLO
+002B   1905           00098     BTFSC       PORTA, 2            ;SALTO SI SIGO ESTANDO EN EL BIT DE START
+002C   2???           00099     GOTO        RE0D                ;FUE UN SPIKE ASI Q SIGO ESPERANDO EL BIT DE START
+002D                  00100 RE1D
+002D   2???           00101     CALL        BAUD                ;SUPONIENDO  SIGO N EL BIT START ESPERO UN CICLO PARA LEER EL SIGUIN
+                            TE BIT
+002E   1003           00102     BCF         STATUS, 0           ; LIMPIO EL CARRY BIT
+002F   0CDC           00103     RRF         BUFFER, 1           ;ROTO MSB LE METO EL CARRY(0) EN EL LSB
+0030   1905           00104     BTFSC       PORTA,2             ;eL PUERTO ESTA EN 0?
+0031   17DC           00105     BSF         BUFFER,7            ;NO, METO EN EL ULTIMO BIT UN 1 
+0032   0BDB           00106     DECFSZ      TEMP, 1             ;YA TENGO LOS 8BITS?
+0033   2???           00107     GOTO        RE1D                ;NO, TODAVI NO LOS TIENES SIGUE RECIBIENDO
+0034   2???           00108     CALL        BAUD                ;ESPERO UN BAUD ESPERANDO EL BIT DE PARADA  
+0035   085C           00109     MOVF        BUFFER, 0           ;METO BUFFER EN W
+0036   0008           00110     RETURN
+                      00111     
+                      00112 ;SUBRUTINA QUE ENVIA SERIAL
+0037                  00113 SEND
+0037   00DC           00114     MOVWF       BUFFER              ;BUFFER=W EN 2 LLEVARE EL CONTADOR
+0038   3008           00115     MOVLW       08H                 ;W=8
+0039   00DB           00116     MOVWF       TEMP                ;TEMP=W
+003A   1085           00117     BCF         PORTA, 1            ;BIT DE START
+003B   2???           00118     CALL        BAUD                ;ESPERO 1 BAUD
+003C                  00119 S1
+003C   0CDC           00120     RRF         BUFFER, 1           ;ROTO Y GUARDO EN BUFFER
+003D   1C03           00121     BTFSS       STATUS, 0           ;PRUEBO SI CARRY ES 1
+003E   1085           00122     BCF         PORTA, 1            ;SI ES CERO MANDO 0
+003F   1803           00123     BTFSC       STATUS, 0           ;PRUEBO SI ES 0 EL CARRY
+0040   1485           00124     BSF         PORTA, 1            ;SI ES UNO MANDO 1
+0041   0805           00125     MOVF        PORTA, 0                ;W=PÒRTA
+0042   2???           00126     CALL        BAUD                ;ESPERO 1 BAUD
+0043   0BDB           00127     DECFSZ      TEMP, 1             ;VOY DISMINUYENDO TEMP
+0044   2???           00128     GOTO        S1                  ;MIENTRAS NO SEA 0 SIGO ENVIANDO
+                      00129     ;RRF                BUFFER, 1           ;DEVUELVO EL BUFFER AL ORIGINAL
+0045   1485           00130     BSF         PORTA, 1            ;BIT DE STOP
+0046   2???           00131     CALL        BAUD                ;BAUD 1
+0047   3400           00132     RETLW       0                   ;REGRESO CON W EN CERO 
+                      00133     
+                      00134 ;SUBRUTINA INTERRUPCION TIMER 1 (MASTER PWM) FRECUENCIA SEÑAL PWM 61HZ CADA 16.4MS ENCINDO EL LED
+0048                  00135 T1INT
+0048   1605           00136     BSF     PORTA, 4                ;PRENDO EL LED (PWM)
+0049   1010           00137     BCF     T1CON,0                 ;PARO TIMER1
+004A   3006           00138     MOVLW   06H                     ;W=6 (TOMANDO EN CUENTA LOS CICLOS Q ESTA SIN CONTAR)
+004B   008E           00139     MOVWF   TMR1L                   ;TMR1L=W=0
+004C   30C0           00140     MOVLW   0C0H                    ;W=C0H=01000000
+004D   008F           00141     MOVWF   TMR1H                   ;TMR1H=W=01000000
+004E   1410           00142     BSF     T1CON, 0                ;ARRANCO TIMER1 DE NUEVO
+004F   085F           00143     MOVF    PWMDATA, 0              ;W=PWMDATA PARA METERSELO AL CONTADOR DEL T0
+0050   3E01           00144     ADDLW   01H                     ;AÑADO 1 PUESTO Q LO PRIMERO Q HAGO ES RESTAR 
+0051   00DE           00145     MOVWF   T0C                     ;METO W AL CONTADOR DE T0
+MPASM 5.83  /HOME/KILLTUTOR/MPLABXPROJECTS/D   3-20-2019  17:56:17         PAGE  4
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+0052   0181           00146     CLRF    TMR0
+0053   100C           00147     BCF     PIR1, 0                 ;RESETEO EL BIT DE INTERRUPCION TIMER1
+0054   2???           00148     GOTO    LISTO                   ;REGRESO AL FINAL DE LA INTERRUPCION
+                      00149     
+                      00150 ;SUBRUTINA INTERRUPCION TIMER 0 (SLAVE DUTYCYCLE) SE EJECUTA CADA 64US    
+                      00151 ;CADA 64US DISMINUYO T0C <0-255>  Y CUANDO LLEGO A 0 APGO EL LED DELAY DE 2US
+0055                  00152 T0INT
+0055   1283           00153     BCF     STATUS, 5               ;BANK 0
+0056   0181           00154     CLRF    TMR0
+0057   110B           00155     BCF     INTCON, 2               ;RESETEO EL BIT DE INTERRUPCION TIMERO
+0058   0BDE           00156     DECFSZ  T0C, 1                  ;DIMINUYO T0C SALTO SI ES 0 EL RESULTADO 1US +1 SI SALTA
+0059   2???           00157     GOTO    LISTO                   ;yA DECREMENTE T0C AS Q ME VOY AL FINAL DE LA INTERRUPCION 
+005A   1205           00158     BCF     PORTA, 4                ;APAGO EL LED (PWM) (MIN=66US)--> ENCINDE POR 66US CON DUTYCYCLE EN 
+                            0%
+005B   2???           00159     GOTO    LISTO                   ;REGRESO AL FINAL DE LA INTERRUPCION
+                      00160     
+                      00161     
+005C                  00162 INTERRUPT
+                      00163     ;GUARDO W Y STATUS PORSIACA
+005C   00D8           00164     MOVWF  W_TEMP                   ;copy W to temp register, could be in either bank
+005D   0E03           00165     SWAPF  STATUS,0                 ;swap status to be saved into W
+005E   1283           00166     BCF    STATUS,5                 ;change to bank 0 regardless of current bank
+005F   00D7           00167     MOVWF  STATUS_TEMP              ;save status to bank 0 register
+0060   138B           00168     BCF         INTCON,7            ;DESHABILITO LAS INTERRUPCIONES GENERALES 
+0061   130B           00169     BCF         INTCON,6            ;DESHABILITO LAS INTERRUPCIONES PERIFERICAS
+Message[302]: Register in operand not in bank 0.  Ensure that bank bits are correct.
+0062   1116           00170     BCF         IOCA, 2             ;DESHABILITO INTERRUPCIONES PUERTO A
+                      00171 
+                      00172     ;COMIENZA LA INTERRUPCIÓN
+0063   180C           00173     BTFSC   PIR1,0              ;PRUEBO SI FUE EL TIMER1 EL QUE SE DESBORDO
+0064   2???           00174     GOTO    T1INT               ;SI ES TIMER1 ME VOY A LA FUNCION DE TIMER 1
+0065   190B           00175     BTFSC   INTCON,2            ;PRUEBO A VER SI FUE TIMER 0 QUE SE DESBORDO
+0066   2???           00176     GOTO    T0INT               ;LLAMO A LA RUTINA DE TIMER0
+0067   180B           00177     BTFSC   INTCON, 0           ;PRUEBO SI LA INTERRUPCION FUE DEL PORTA
+0068   2???           00178     GOTO    RECEIVE             ;LLAMO A LA RUTINA DEL RECEPTOR
+0069   1B0C           00179     BTFSC   PIR1, 6             ;VERIFICO SI FUE EL ADC
+006A   2???           00180     GOTO    FOUR1               ;MANEJO LA CONVERSION
+                      00181     
+006B                  00182 LISTO
+006B   178B           00183     BSF         INTCON, 7           ;RESTABLEZCO LAS INTERRUPCIONES GENERALES
+006C   170B           00184     BSF         INTCON, 6           ;RESTABLEZCO LAS INTERRUPCIONES PERIFERICAS
+Message[302]: Register in operand not in bank 0.  Ensure that bank bits are correct.
+006D   1516           00185     BSF         IOCA, 2             ;RESTABLEZCO INTERRUPCIONES PUERTO A
+                      00186      ;RESTAURO W Y STATUS
+006E   0E57           00187     SWAPF  STATUS_TEMP,0 ;sWap STATUS_TEMP register into W, sets bank to original state
+006F   0083           00188     MOVWF  STATUS           ;move W into STATUS register
+0070   0ED8           00189     SWAPF  W_TEMP,1         ;swap W_TEMP
+0071   0E58           00190     SWAPF  W_TEMP,0         ;swap W_TEMP into W
+0072   0009           00191     RETFIE
+                      00192  
+0073                  00193 ONE 
+0073   3001           00194     MOVLW   01H                     ; W = 0000001
+0074   1D85           00195     BTFSS   PORTA, 3                ; Si RA3 es 1 salta (w=0000001) SINO W=0000000
+MPASM 5.83  /HOME/KILLTUTOR/MPLABXPROJECTS/D   3-20-2019  17:56:17         PAGE  5
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+0075   3000           00196     MOVLW   00H                     ; W = 0000000
+0076   2???           00197     CALL    SEND                    ; ENVIO W A LA CONSOLA      
+0077   2???           00198     GOTO    LISTO
+                      00199     
+0078                  00200 TWO
+0078   2???           00201     CALL    RECEIVED                ; RECIBO EL DATO 
+0079   00DD           00202     MOVWF   DATO                        ; LO que este en w lo meto en dato
+007A   1685           00203     BSF     PORTA, 5                ; RA5 LO PONGO EN 1 (PRENDE EL LED)
+007B   1C5D           00204     BTFSS   DATO, 0                 ; SI lsb of dato es 1 salta sino sigue
+007C   1285           00205     BCF     PORTA, 5                ; RA5 LO PONGO EN 0 (APAGO EL LED)
+007D   2???           00206     GOTO    LISTO
+                      00207     
+007E                  00208 TREE
+007E   2???           00209     CALL    RECEIVED                ; RECIBO EL DATO 
+007F   00DF           00210     MOVWF   PWMDATA                 ; METO EL DATO Q RECIBI A PWMDATA
+0080   2???           00211     GOTO    LISTO                   ; WAITING INSTRUCTIONS
+                      00212     
+0081                  00213 FOUR0
+0081   149F           00214     BSF     ADCON0, 1               ; EMPIEZO LA CONVERSION ADC PAPAS Y LISTO!
+0082   2???           00215     GOTO    LISTO                   ;MIENTRAS CONVIERTO RECIBO DATA PORSIACA
+0083                  00216 FOUR1
+0083   1683           00217     BSF     STATUS, 5               ;MUEVO AL BANCO 1
+Message[302]: Register in operand not in bank 0.  Ensure that bank bits are correct.
+0084   009E           00218     MOVWF   ADRESL                  ;RESULTADO ADC A W
+0085   2???           00219     CALL    SEND                    ;ENVIO A LA CONSOLA
+0086   130C           00220     BCF     PIR1, 6                 ;RESETEO LAS INTERRUPCIONES DEL ADC
+0087   2???           00221     GOTO    LISTO
+                      00222     
+                      00223     
+                      00224 ;SUBRUTINA QUE DECIDE QUE COSA HACER LUEGO DE RECIBIR DATA
+0088                  00225 INTLIST
+0088   3C01           00226     SUBLW   01H                     ;RESTO 1 A W PARA VER SI ES ESTA
+0089   1903           00227     BTFSC   STATUS, 2               ;ES CERO? Z=1 ?
+008A   2???           00228     GOTO    ONE                     ;SI ES CERO INSTRUCTION 1
+008B   3E01           00229     ADDLW   01H                     ; LE DEVUELVO LO Q LE QUITE
+008C   3C02           00230     SUBLW   02H                     ; RESTO 2 A W
+008D   1903           00231     BTFSC   STATUS, 2               ;ES CERO? Z=1 ?
+008E   2???           00232     GOTO    TWO                     ; SI, ES 0 FUNCTION 2
+008F   3E02           00233     ADDLW   02H                     ; LE DEVUELVO LO Q LE QUITE
+0090   3C03           00234     SUBLW   03H                     ; RESTO 3
+0091   1903           00235     BTFSC   STATUS, 2               ; ES CERO? Z=1 ?
+0092   2???           00236     GOTO    TREE                    ; SI, ES 0 FUNCTION 2
+0093   3E03           00237     ADDLW   03H                     ; LE DEVUELVO LO QUE LE QUITE
+0094   3C11           00238     SUBLW   11H                     ; RESTO 11H
+0095   1903           00239     BTFSC   STATUS, 2               ; ES CERO? Z=1 ?
+0096   2???           00240     GOTO    FOUR0                   ; SI, ES 0 FUNCTION 2
+0097   2???           00241     GOTO    LISTO                   ; CICLO INFINITO
+                      00242 
+                      00243 ;*******************************************************************************
+                      00244 ; MAIN PROGRAM
+                      00245 ;*******************************************************************************
+                      00246 
+                      00247 MAIN_PROG CODE                      ; let linker place main program
+MPASM 5.83  /HOME/KILLTUTOR/MPLABXPROJECTS/D   3-20-2019  17:56:17         PAGE  6
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+                      00248 
+                      00249 ;BIENVENIDA OFICIAL
+0000   0782           00250 GUERCOME        addwf PCL,1             ;suma la posición del elemento a la del PC
+0001   3442           00251         retlw 0x42              ;retorna en w el código ASCII de la B
+0002   3469           00252         retlw 0x69              ;retorna en w el código ASCII de la I
+0003   3465           00253         retlw 0x65              ;retorna en w el código ASCII de la E
+0004   346E           00254         retlw 0x6E              ;retorna en w el código ASCII de la N  
+0005   3476           00255         retlw 0x76              ;retorna en w el código ASCII de la V
+0006   3465           00256         retlw 0x65              ;retorna en w el código ASCII de la E
+0007   346E           00257         retlw 0x6E              ;retorna en w el código ASCII de la N
+0008   3469           00258         retlw 0x69              ;retorna en w el código ASCII de la I
+0009   3464           00259         retlw 0x64              ;retorna en w el código ASCII de la D
+000A   346F           00260         retlw 0x6F              ;retorna en w el código ASCII de la O
+000B   3473           00261         retlw 0x73              ;retorna en w el código ASCII de la S
+000C   340D           00262         retlw 0x0D              ;retorna en w el código ASCII de la CR  
+                      00263 ;ESPERO INSTRUCCION
+000D   0782           00264 ESPERAI         addwf PCL,1             ;suma la posición del elemento a la del PC
+000E   3445           00265         retlw 0x45              ;retorna en w el código ASCII de la E
+000F   3473           00266         retlw 0x73              ;retorna en w el código ASCII de la S
+0010   3470           00267         retlw 0x70              ;retorna en w el código ASCII de la P
+0011   3465           00268         retlw 0x65              ;retorna en w el código ASCII de la E  
+0012   3472           00269         retlw 0x72              ;retorna en w el código ASCII de la R
+0013   346F           00270         retlw 0x6F              ;retorna en w el código ASCII de la O
+0014   3420           00271         retlw 0x20              ;retorna en w el código ASCII de la SPACE
+0015   3449           00272         retlw 0x49              ;retorna en w el código ASCII de la I
+0016   344E           00273         retlw 0x4E              ;retorna en w el código ASCII de la N
+0017   3453           00274         retlw 0x53              ;retorna en w el código ASCII de la S
+0018   343A           00275         retlw 0x3A              ;retorna en w el código ASCII de la :
+0019   3420           00276         retlw 0x20              ;retorna en w el código ASCII de la CR  
+                      00277 ;ESPERO DATO STRING     
+001A   0782           00278 ESPERAD         addwf PCL,1             ;suma la posición del elemento a la del PC
+001B   3445           00279         retlw 0x45              ;retorna en w el código ASCII de la E
+001C   3473           00280         retlw 0x73              ;retorna en w el código ASCII de la S
+001D   3470           00281         retlw 0x70              ;retorna en w el código ASCII de la P
+001E   3465           00282         retlw 0x65              ;retorna en w el código ASCII de la E  
+001F   3472           00283         retlw 0x72              ;retorna en w el código ASCII de la R
+0020   346F           00284         retlw 0x6F              ;retorna en w el código ASCII de la O
+0021   3420           00285         retlw 0x20              ;retorna en w el código ASCII de la SPACE
+0022   3444           00286         retlw 0x44              ;retorna en w el código ASCII de la D
+0023   3441           00287         retlw 0x41              ;retorna en w el código ASCII de la A
+0024   3454           00288         retlw 0x54              ;retorna en w el código ASCII de la T
+0025   344F           00289         retlw 0x4F              ;retorna en w el código ASCII de la :
+0026   343A           00290         retlw 0x3A              ;retorna en w el código ASCII de la CR  
+                      00291         
+0027                  00292 START;VERIFICADO TODO.. LISTO PAPU
+                      00293     ;LIMPIANDO TODO vERIFICADO, FUNCIONA AL PELO
+                      00294     ;CLRF    STOPT0     
+0027   1283           00295     BCF     STATUS, 5               ; BANK0
+0028   0185           00296     CLRF    PORTA                   ;LIMPIO PUERTOA
+0029   0187           00297     CLRF    PORTC                   ;LIMPIO PUERTO C
+002A   1683           00298     BSF     STATUS, 5               ;BANK1
+Message[302]: Register in operand not in bank 0.  Ensure that bank bits are correct.
+002B   0185           00299     CLRF    TRISA                   ;LIMPIO CONFIG PORTA
+MPASM 5.83  /HOME/KILLTUTOR/MPLABXPROJECTS/D   3-20-2019  17:56:17         PAGE  7
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+Message[302]: Register in operand not in bank 0.  Ensure that bank bits are correct.
+002C   0187           00300     CLRF    TRISC                   ;LIMPIO CONFIG PORTC
+Message[302]: Register in operand not in bank 0.  Ensure that bank bits are correct.
+002D   0191           00301     CLRF    ANSEL                   ;LIMPIO ANSEL REGISTRO
+Message[302]: Register in operand not in bank 0.  Ensure that bank bits are correct.
+002E   0196           00302     CLRF    IOCA                    ;INTERRUPCIONES EN PUERTO
+002F   1283           00303     BCF     STATUS, 5               ;BANK0
+                      00304     
+                      00305     ;Configurando ADC  --vERIFICADO, FUNCIONA PEPA
+0030   179F           00306     BSF     ADCON0, 7               ; CONFIGURANDO ADC JUSTIFICADO DERECHA
+0031   1683           00307     BSF     STATUS, 5               ; BANK1
+Message[302]: Register in operand not in bank 0.  Ensure that bank bits are correct.
+0032   171F           00308     BSF     ADCON1, 6               ; CONFIGURANDO ADC 4TOSC
+Message[302]: Register in operand not in bank 0.  Ensure that bank bits are correct.
+0033   1411           00309     BSF     ANSEL, 0                ; CONFIGURANDO PIN ADC A CONVERTIR
+                      00310     
+                      00311     
+                      00312     ;CONFIGURANDO INTERRUPCIONES
+0034   30F8           00313     MOVLW   0f8h                                    ;ACTIVO TODAS LAS INTERRUPCIONES
+0035   008B           00314     MOVWF   INTCON                          ;CON ESTA CONFIG 11111000
+0036   128B           00315     BCF     INTCON, 5
+Message[302]: Register in operand not in bank 0.  Ensure that bank bits are correct.
+0037   100C           00316     BCF     PIE1,0                          ; ENABLES TIMER1 INTERRUPTS
+0038   30C5           00317     MOVLW   B'11000101'
+Message[302]: Register in operand not in bank 0.  Ensure that bank bits are correct.
+0039   0081           00318     MOVWF   OPTION_REG
+003A   1283           00319     BCF     STATUS, 5                       ; BANK0
+003B   3000           00320     MOVLW   00H                             ;W=0
+003C   008E           00321     MOVWF   TMR1L                           ;TMR1L=W=0
+003D   30C0           00322     MOVLW   0C0H                                    ;W=40H=01000000
+003E   008F           00323     MOVWF   TMR1H                           ;TMR1H=W=01000000
+003F   300D           00324     MOVLW   0DH                             ;00001111 T1CON CONFIG
+0040   0090           00325     MOVWF   T1CON                           ;CONFIGURO T1
+                      00326     
+                      00327     
+                      00328     ;CONFIGURACION DE PUERTOS
+0041   1683           00329     BSF     STATUS, 5               ; BANK1
+0042   300D           00330     MOVLW   0dh                     ; Configurando TRISA para O, O, I, I, O, I
+Message[302]: Register in operand not in bank 0.  Ensure that bank bits are correct.
+0043   0085           00331     MOVWF   TRISA                   ; Metiendo la configuración del TRISA desde W
+Message[302]: Register in operand not in bank 0.  Ensure that bank bits are correct.
+0044   1516           00332     BSF     IOCA , 2                ;INTERRUPCIONES EN EL PUERTO A2 MANAO
+0045   1283           00333     BCF     STATUS, 5                       ; BANK0
+                      00334     ;LIMPIANDO COSAS
+0046   30FF           00335     MOVLW   0FFH                    ; W= 000111B DUTY CYCLE A LA MITAD
+0047   00DF           00336     MOVWF   PWMDATA                 ; PWMDATA=W
+0048   1485           00337     BSF     PORTA, 1                ; tx a 1
+                      00338     
+                      00339 ;BIENVENIDOS MESSAGE  
+0049   300C           00340     MOVLW   0CH                     ;W=12
+004A   00D4           00341     MOVWF   SIZE                    ;SIZE=W
+004B   3000           00342     MOVLW   00H                     ;W=0
+004C   00D5           00343     MOVWF   CUENTA                  ;CUENTA=W
+MPASM 5.83  /HOME/KILLTUTOR/MPLABXPROJECTS/D   3-20-2019  17:56:17         PAGE  8
+
+
+LOC  OBJECT CODE     LINE SOURCE TEXT
+  VALUE
+
+004D                  00344 BIENVENIDA    
+004D   00D5           00345     MOVWF   CUENTA                  ;CUENTA=W
+004E   2???           00346     CALL    GUERCOME                ;OBTENGO EL CARACTER
+004F   2???           00347     CALL    SEND                    ;LO ENVIO
+0050   0855           00348     MOVF    CUENTA, 0               ;W=CUENTA
+0051   3E01           00349     ADDLW   01H                     ;W=W+1
+0052   0BD4           00350     DECFSZ  SIZE, 1                 ;SIZE=SIZE-1 SALTA CUANDO LLEGA A 0
+0053   2???           00351     GOTO    BIENVENIDA
+                      00352 ;ESPERO INS MESSAGE   
+0054   300B           00353     MOVLW   0BH                     ;W=11
+0055   00D4           00354     MOVWF   SIZE                    ;SIZE=W
+0056   3000           00355     MOVLW   00H                     ;W=1
+0057   00D5           00356     MOVWF   CUENTA                  ;CUENTA=W
+0058                  00357 BIENVENIDA2    
+0058   00D5           00358     MOVWF   CUENTA                  ;CUENTA=W
+0059   2???           00359     CALL    ESPERAI                 ;OBTENGO EL CARACTER
+005A   2???           00360     CALL    SEND                    ;LO ENVIO
+005B   0855           00361     MOVF    CUENTA, 0               ;W=CUENTA
+005C   3E01           00362     ADDLW   01H                     ;W=W+1    
+005D   0BD4           00363     DECFSZ  SIZE, 1                 ;SIZE=SIZE-1 SALTA CUANDO LLEGA A 0
+005E   2???           00364     GOTO    BIENVENIDA2
+                      00365 
+005F   2???           00366     GOTO    $                       ;LOOP FOREVER lml
+                      00367 
+3F94                  00368     END
+MPASM 5.83  /HOME/KILLTUTOR/MPLABXPROJECTS/D   3-20-2019  17:56:17         PAGE  9
+
+
+SYMBOL TABLE
+  LABEL                             VALUE 
+
+ADCON0                            0000001F
+ADCON1                            0000009F
+ADCS0                             00000004
+ADCS1                             00000005
+ADCS2                             00000006
+ADFM                              00000007
+ADIE                              00000006
+ADIF                              00000006
+ADON                              00000000
+ADRESH                            0000001E
+ADRESL                            0000009E
+ANS0                              00000000
+ANS1                              00000001
+ANS2                              00000002
+ANS3                              00000003
+ANS4                              00000004
+ANS5                              00000005
+ANS6                              00000006
+ANS7                              00000007
+ANSEL                             00000091
+BAUD                              00000005
+BIENVENIDA                        0000004D
+BIENVENIDA2                       00000058
+BSR_TEMP                          00000056
+BUFFER                            0000005C
+C                                 00000000
+CAL0                              00000002
+CAL1                              00000003
+CAL2                              00000004
+CAL3                              00000005
+CAL4                              00000006
+CAL5                              00000007
+CHS0                              00000002
+CHS1                              00000003
+CHS2                              00000004
+CINV                              00000004
+CIS                               00000003
+CM0                               00000000
+CM1                               00000001
+CM2                               00000002
+CMCON                             00000019
+CMIE                              00000003
+CMIF                              00000003
+COUNT                             00000059
+COUT                              00000006
+CUENTA                            00000055
+DATO                              0000005D
+DC                                00000001
+EEADR                             0000009B
+EECON1                            0000009C
+EECON2                            0000009D
+EEDAT                             0000009A
+EEDATA                            0000009A
+MPASM 5.83  /HOME/KILLTUTOR/MPLABXPROJECTS/D   3-20-2019  17:56:17         PAGE 10
+
+
+SYMBOL TABLE
+  LABEL                             VALUE 
+
+EEIE                              00000007
+EEIF                              00000007
+ESPERAD                           0000001A
+ESPERAI                           0000000D
+F                                 00000001
+FOUR0                             00000081
+FOUR1                             00000083
+FSR                               00000004
+GIE                               00000007
+GO                                00000001
+GO_DONE                           00000001
+GO_NOT_DONE                       00000001
+GUERCOME                          00000000
+HALFBAUD                          00000009
+INDF                              00000000
+INTCON                            0000000B
+INTE                              00000004
+INTEDG                            00000006
+INTERRUPT                         0000005C
+INTF                              00000001
+INTLIST                           00000088
+IOC                               00000096
+IOCA                              00000096
+IOCA0                             00000000
+IOCA1                             00000001
+IOCA2                             00000002
+IOCA3                             00000003
+IOCA4                             00000004
+IOCA5                             00000005
+IRP                               00000007
+LISTO                             0000006B
+NOT_BOD                           00000000
+NOT_BOR                           00000000
+NOT_DONE                          00000001
+NOT_GPPU                          00000007
+NOT_PD                            00000003
+NOT_POR                           00000001
+NOT_RAPU                          00000007
+NOT_T1SYNC                        00000002
+NOT_TO                            00000004
+ONE                               00000073
+OPTION_REG                        00000081
+OSCCAL                            00000090
+PCL                               00000002
+PCLATH                            0000000A
+PCON                              0000008E
+PEIE                              00000006
+PIE1                              0000008C
+PIR1                              0000000C
+PORTA                             00000005
+PORTC                             00000007
+PS0                               00000000
+PS1                               00000001
+MPASM 5.83  /HOME/KILLTUTOR/MPLABXPROJECTS/D   3-20-2019  17:56:17         PAGE 11
+
+
+SYMBOL TABLE
+  LABEL                             VALUE 
+
+PS2                               00000002
+PSA                               00000003
+PWMDATA                           0000005F
+RA0                               00000000
+RA1                               00000001
+RA2                               00000002
+RA3                               00000003
+RA4                               00000004
+RA5                               00000005
+RAIE                              00000003
+RAIF                              00000000
+RC0                               00000000
+RC1                               00000001
+RC2                               00000002
+RC3                               00000003
+RC4                               00000004
+RC5                               00000005
+RD                                00000000
+RE0                               00000011
+RE0D                              00000025
+RE1                               00000019
+RE1D                              0000002D
+RECEIVE                           0000000E
+RECEIVED                          00000025
+RP0                               00000005
+RP1                               00000006
+S1                                0000003C
+SEND                              00000037
+SIZE                              00000054
+START                             00000027
+STATUS                            00000003
+STATUS_TEMP                       00000057
+T0C                               0000005E
+T0CS                              00000005
+T0IE                              00000005
+T0IF                              00000002
+T0INT                             00000055
+T0SE                              00000004
+T1CKPS0                           00000004
+T1CKPS1                           00000005
+T1CON                             00000010
+T1IE                              00000000
+T1IF                              00000000
+T1INT                             00000048
+T1OSCEN                           00000003
+TEMP                              0000005B
+TMR0                              00000001
+TMR0IE                            00000005
+TMR0IF                            00000002
+TMR1                              0000000E
+TMR1CS                            00000001
+TMR1GE                            00000006
+TMR1H                             0000000F
+MPASM 5.83  /HOME/KILLTUTOR/MPLABXPROJECTS/D   3-20-2019  17:56:17         PAGE 12
+
+
+SYMBOL TABLE
+  LABEL                             VALUE 
+
+TMR1IE                            00000000
+TMR1IF                            00000000
+TMR1L                             0000000E
+TMR1ON                            00000000
+TREE                              0000007E
+TRISA                             00000085
+TRISA0                            00000000
+TRISA1                            00000001
+TRISA2                            00000002
+TRISA3                            00000003
+TRISA4                            00000004
+TRISA5                            00000005
+TRISC                             00000087
+TRISC0                            00000000
+TRISC1                            00000001
+TRISC2                            00000002
+TRISC3                            00000003
+TRISC4                            00000004
+TRISC5                            00000005
+TWO                               00000078
+VCFG                              00000006
+VR0                               00000000
+VR1                               00000001
+VR2                               00000002
+VR3                               00000003
+VRCON                             00000099
+VREN                              00000007
+VRR                               00000005
+W                                 00000000
+WPU                               00000095
+WPUA                              00000095
+WPUA0                             00000000
+WPUA1                             00000001
+WPUA2                             00000002
+WPUA4                             00000004
+WPUA5                             00000005
+WR                                00000001
+WREN                              00000002
+WRERR                             00000003
+W_TEMP                            00000058
+Z                                 00000002
+_BODEN                            00003FFF
+_BODEN_OFF                        00003FBF
+_BOREN_OFF                        00003FBF
+_BOREN_ON                         00003FFF
+_CONFIG                           00002007
+_CP                               00003F7F
+_CPD                              00003EFF
+_CPD_OFF                          00003FFF
+_CPD_ON                           00003EFF
+_CP_OFF                           00003FFF
+_CP_ON                            00003F7F
+_DEVID1                           00002006
+MPASM 5.83  /HOME/KILLTUTOR/MPLABXPROJECTS/D   3-20-2019  17:56:17         PAGE 13
+
+
+SYMBOL TABLE
+  LABEL                             VALUE 
+
+_EC_OSC                           00003FFB
+_EXTRC_OSC_CLKOUT                 00003FFF
+_EXTRC_OSC_NOCLKOUT               00003FFE
+_FOSC_EC                          00003FFB
+_FOSC_EXTRCCLK                    00003FFF
+_FOSC_EXTRCIO                     00003FFE
+_FOSC_HS                          00003FFA
+_FOSC_INTRCCLK                    00003FFD
+_FOSC_INTRCIO                     00003FFC
+_FOSC_LP                          00003FF8
+_FOSC_XT                          00003FF9
+_HS_OSC                           00003FFA
+_IDLOC0                           00002000
+_IDLOC1                           00002001
+_IDLOC2                           00002002
+_IDLOC3                           00002003
+_INTRC_OSC_CLKOUT                 00003FFD
+_INTRC_OSC_NOCLKOUT               00003FFC
+_LP_OSC                           00003FF8
+_MAIN_PROG_005F                   0000005F
+_MCLRE_OFF                        00003FDF
+_MCLRE_ON                         00003FFF
+_PWRTE_OFF                        00003FFF
+_PWRTE_ON                         00003FEF
+_WDTE_OFF                         00003FF7
+_WDTE_ON                          00003FFF
+_WDT_OFF                          00003FF7
+_WDT_ON                           00003FFF
+_XT_OSC                           00003FF9
+__16F676                          00000001
+__DEBUG                           
+__MPLAB_DEBUGGER_SIMULATOR        1
+baud1                             00000007
+hbaud1                            0000000B
+
+Errors   :     0
+Warnings :     0 reported,     0 suppressed
+Messages :    14 reported,     0 suppressed
+
+
